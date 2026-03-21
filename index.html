@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bo's Recovery Copilot</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f7f7f5; --bg3: #f0efeb;
+    --text: #1a1a18; --text2: #5a5a56; --text3: #9a9a94;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --teal: #1D9E75; --teal-lt: #E1F5EE; --teal-dk: #0F6E56;
+    --amber: #BA7517; --amber-lt: #FAEEDA;
+    --red: #E24B4A; --red-lt: #FCEBEB; --red-dk: #791F1F;
+    --blue: #378ADD; --blue-lt: #E6F1FB; --blue-dk: #0C447C;
+    --purple: #7F77DD; --purple-lt: #EEEDFE; --purple-dk: #3C3489;
+    --radius: 10px; --radius-sm: 7px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b;
+      --text: #f0efe8; --text2: #a8a8a0; --text3: #68685e;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+      --teal-lt: #0a3326; --amber-lt: #3a2800; --red-lt: #2e0e0e;
+      --blue-lt: #0a1e33; --purple-lt: #1a1840;
+    }
+  }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg3); color: var(--text); }
+
+  /* ── LAYOUT ── */
+  .app { max-width: 680px; margin: 0 auto; min-height: 100vh; background: var(--bg); display: flex; flex-direction: column; box-shadow: 0 0 0 1px var(--border); }
+
+  /* ── LOGIN ── */
+  #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; background: var(--bg3); }
+  .login-box { width: 100%; max-width: 340px; background: var(--bg); border-radius: var(--radius); padding: 2rem; border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 1.75rem; }
+  .login-icon { width: 38px; height: 38px; background: var(--teal); border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .login-title { font-size: 17px; font-weight: 600; }
+  .login-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .login-label { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; display: block; }
+  .login-input { width: 100%; padding: 11px 13px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 15px; background: var(--bg); color: var(--text); margin-bottom: 12px; }
+  .login-input:focus { outline: none; border-color: var(--teal); }
+  .login-btn { width: 100%; padding: 11px; background: var(--teal); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; cursor: pointer; }
+  .login-btn:hover { opacity: 0.88; }
+  .login-err { font-size: 12px; color: var(--red); margin-top: 8px; text-align: center; min-height: 18px; }
+
+  /* ── TOP BAR ── */
+  .topbar { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; background: var(--bg); position: sticky; top: 0; z-index: 10; }
+  .brand { display: flex; align-items: center; gap: 9px; }
+  .brand-icon { width: 30px; height: 30px; background: var(--teal); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .brand-name { font-size: 15px; font-weight: 600; }
+  .brand-sub { font-size: 11px; color: var(--text3); }
+  .logout-btn { font-size: 12px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 5px; }
+  .logout-btn:hover { color: var(--text); background: var(--bg2); }
+
+  /* ── TABS ── */
+  .tab-bar { display: flex; gap: 2px; padding: 4px; background: var(--bg2); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab { padding: 6px 13px; border-radius: 6px; border: none; background: transparent; font-size: 13px; color: var(--text2); cursor: pointer; white-space: nowrap; transition: all .12s; }
+  .tab.on { background: var(--bg); color: var(--text); font-weight: 500; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .tab:hover:not(.on) { color: var(--text); background: var(--bg3); }
+
+  /* ── PANELS ── */
+  .panel { display: none; padding: 16px; flex: 1; }
+  .panel.on { display: block; }
+
+  /* ── FORM ── */
+  .form-intro { font-size: 13px; color: var(--text2); margin-bottom: 14px; line-height: 1.6; padding: 10px 12px; background: var(--bg2); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+  .form-intro strong { color: var(--text); }
+  .frow { margin-bottom: 14px; }
+  .flabel { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .flabel-hint { font-size: 11px; font-weight: 400; color: var(--text3); }
+
+  .pills { display: flex; gap: 5px; flex-wrap: wrap; }
+  .pill { padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border2); background: var(--bg); font-size: 12px; color: var(--text2); cursor: pointer; transition: all .1s; }
+  .pill:hover { background: var(--bg2); color: var(--text); }
+  .pill.worse  { background: var(--red-lt);   border-color: var(--red);   color: var(--red-dk); }
+  .pill.same   { background: var(--bg2);       border-color: var(--border2); color: var(--text); }
+  .pill.better { background: var(--teal-lt);   border-color: var(--teal);  color: var(--teal-dk); }
+  .pill.new    { background: var(--blue-lt);   border-color: var(--blue);  color: var(--blue-dk); }
+  .pill.flagyes{ background: var(--red);       border-color: var(--red);   color: #fff; }
+  .pill.flagno { background: var(--bg2);       border-color: var(--border2); color: var(--text); }
+
+  .check-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cpill { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border2); font-size: 12px; color: var(--text2); cursor: pointer; user-select: none; transition: all .1s; }
+  .cpill.on { background: var(--teal-lt); border-color: var(--teal); color: var(--teal-dk); }
+  .cpill input { display: none; }
+
+  textarea { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 11px; font-size: 13px; color: var(--text); background: var(--bg); resize: vertical; min-height: 56px; line-height: 1.6; font-family: inherit; }
+  textarea:focus { outline: none; border-color: var(--teal); }
+
+  .sleep-row { display: flex; align-items: center; gap: 10px; }
+  input[type=range] { flex: 1; accent-color: var(--teal); }
+
+  .submit-btn { width: 100%; padding: 12px; background: var(--teal); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 8px; transition: opacity .15s; }
+  .submit-btn:hover { opacity: 0.88; }
+  .submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ── CARDS ── */
+  .card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .prose p { font-size: 13px; color: var(--text); line-height: 1.7; margin-bottom: 7px; }
+  .prose p:last-child { margin-bottom: 0; }
+
+  .badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  .b-teal   { background: var(--teal-lt);   color: var(--teal-dk); }
+  .b-blue   { background: var(--blue-lt);   color: var(--blue-dk); }
+  .b-purple { background: var(--purple-lt); color: var(--purple-dk); }
+  .b-red    { background: var(--red-lt);    color: var(--red-dk); }
+  .b-amber  { background: var(--amber-lt);  color: var(--amber); }
+  .b-gray   { background: var(--bg2);       color: var(--text2); }
+
+  .section-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
+
+  .q-list { list-style: none; }
+  .q-item { display: flex; gap: 9px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); line-height: 1.6; }
+  .q-item:last-child { border-bottom: none; }
+  .q-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--teal-lt); color: var(--teal-dk); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+
+  .tier-item { padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .tier-item:last-child { border-bottom: none; }
+  .tier-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+  .tier-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+  .flag-bar { display: flex; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--red-lt); border: 1px solid var(--red); margin-bottom: 12px; }
+  .flag-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; margin-top: 4px; }
+  .flag-txt { font-size: 13px; color: var(--red-dk); line-height: 1.6; }
+
+  /* ── DASHBOARD ── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .metric { background: var(--bg2); border-radius: var(--radius-sm); padding: 12px; }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .metric-val { font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.2; }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .bar-lbl { font-size: 12px; color: var(--text2); min-width: 100px; }
+  .bar-bg { flex: 1; height: 7px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+  .bar-val { font-size: 11px; color: var(--text2); min-width: 60px; text-align: right; }
+
+  .trend-chart { width: 100%; height: 120px; margin-bottom: 12px; }
+
+  .hist-item { padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-date { font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; }
+  .hist-note { font-size: 12px; color: var(--text2); line-height: 1.5; flex: 1; }
+  .hist-badges { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
+
+  /* ── DOCTOR ── */
+  .print-block { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  .print-head { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: .05em; }
+  .copy-btn { padding: 6px 13px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: var(--bg); font-size: 12px; color: var(--text2); cursor: pointer; }
+  .copy-btn:hover { background: var(--bg2); }
+  .disclaimer { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg2); margin-top: 12px; }
+  .disclaimer p { font-size: 11px; color: var(--text3); line-height: 1.6; }
+
+  /* ── UTIL ── */
+  .loading { display: flex; align-items: center; gap: 10px; padding: 24px 0; color: var(--text2); font-size: 13px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--teal); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { text-align: center; padding: 40px 16px; color: var(--text3); font-size: 13px; line-height: 1.8; }
+  .empty .icon { font-size: 36px; margin-bottom: 10px; }
+
+  .act-item { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .act-item:last-child { border-bottom: none; }
+  .chk { width: 17px; height: 17px; border: 1.5px solid var(--border2); border-radius: 4px; flex-shrink: 0; margin-top: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .12s; }
+  .chk.done { background: var(--teal); border-color: var(--teal); }
+  .act-txt { font-size: 13px; color: var(--text); line-height: 1.6; }
+  .act-txt.done { text-decoration: line-through; color: var(--text3); }
+
+  @media (max-width: 500px) { .topbar, .panel { padding: 10px 12px; } }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div>
+        <div class="login-title">Bo's Recovery Copilot</div>
+        <div class="login-sub">Family &amp; care team</div>
+      </div>
+    </div>
+    <label class="login-label">Access password</label>
+    <input class="login-input" type="password" id="login-pw" placeholder="Enter team password"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN APP ═══════════════ -->
+<div class="app" id="main-app" style="display:none">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">Bo's Recovery Copilot</div>
+        <div class="brand-sub">TBI · Post-Craig · Eye blink communication</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Sign out</button>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab on" onclick="nav('update',this)">Update</button>
+    <button class="tab"    onclick="nav('brief',this)">Brief</button>
+    <button class="tab"    onclick="nav('research',this)">Research</button>
+    <button class="tab"    onclick="nav('dashboard',this)">Dashboard</button>
+    <button class="tab"    onclick="nav('doctor',this)">For Doctor</button>
+  </div>
+
+  <!-- UPDATE -->
+  <div id="p-update" class="panel on">
+    <div class="form-intro">
+      <strong>Quick check-in · ~90 seconds</strong><br>
+      Bo's full history is pre-loaded. Just note what changed today.
+    </div>
+
+    <div class="frow">
+      <div class="flabel">Eye blink communication <span class="flabel-hint">vs yesterday</span></div>
+      <div class="pills" id="r-blinks">
+        <button class="pill" onclick="sel('blinks','worse',this)">Fewer / less reliable</button>
+        <button class="pill" onclick="sel('blinks','same',this)">About the same</button>
+        <button class="pill" onclick="sel('blinks','better',this)">More / more reliable</button>
+        <button class="pill" onclick="sel('blinks','new',this)">New command / pattern</button>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="flabel">Alertness &amp; engagement <span class="flabel-hint">vs yesterday</span></div>
+      <div class="pills" id="r-alert">
+        <button class="pill" onclick="sel('alert','worse',this)">Less alert</button>
+        <button class="pill" onclick="sel('alert','same',this)">About the same</button>
+        <button class="pill" onclick="sel('alert','better',this)">More alert</button>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="flabel">Movement / motor <span class="flabel-hint">any limb, vs yesterday</span></div>
+      <div class="pills" id="r-motor">
+        <button class="pill" onclick="sel('motor','worse',this)">Less movement</button>
+        <button class="pill" onclick="sel('motor','same',this)">About the same</button>
+        <button class="pill" onclick="sel('motor','better',this)">More / stronger</button>
+        <button class="pill" onclick="sel('motor','new',this)">New movement seen</button>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="flabel">Comfort &amp; mood <span class="flabel-hint">vs yesterday</span></div>
+      <div class="pills" id="r-mood">
+        <button class="pill" onclick="sel('mood','worse',this)">More distressed</button>
+        <button class="pill" onclick="sel('mood','same',this)">About the same</button>
+        <button class="pill" onclick="sel('mood','better',this)">Calmer / more comfortable</button>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="flabel">Therapy today</div>
+      <div class="check-row">
+        <label class="cpill" onclick="this.classList.toggle('on')"><input type="checkbox">PT</label>
+        <label class="cpill" onclick="this.classList.toggle('on')"><input type="checkbox">OT</label>
+        <label class="cpill" onclick="this.classList.toggle('on')"><input type="checkbox">SLP</label>
+        <label class="cpill" onclick="this.classList.toggle('on')"><input type="checkbox">None today</label>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="flabel">Sleep last night <span class="flabel-hint" id="sleep-disp">6 hrs</span></div>
+      <div class="sleep-row">
+        <span style="font-size:12px;color:var(--text3)">0</span>
+        <input type="range" min="0" max="12" step="1" value="6" id="sleep-r"
+          oninput="sleepVal=+this.value;document.getElementById('sleep-disp').textContent=this.value+' hrs'">
+        <span style="font-size:12px;color:var(--text3)">12</span>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="flabel">One thing worth noting <span class="flabel-hint">win, concern, or observation</span></div>
+      <textarea id="f-note" placeholder="e.g. Blinked yes/no reliably 3 times in a row · Seemed tired after PT · New finger movement · Responded to family voice..."></textarea>
+    </div>
+
+    <div class="frow">
+      <div class="flabel">Any urgent concerns? <span class="flabel-hint">fever, seizure, pump issue, sudden change</span></div>
+      <div class="pills" id="r-flag">
+        <button class="pill" onclick="sel('flag','no',this)">No</button>
+        <button class="pill" onclick="sel('flag','yes',this)">Yes — describe below</button>
+      </div>
+    </div>
+    <div id="flag-wrap" style="display:none;margin-top:-8px;margin-bottom:14px">
+      <textarea id="f-flag" placeholder="Describe the urgent concern..."></textarea>
+    </div>
+
+    <button class="submit-btn" id="go-btn" onclick="runAnalysis()">Generate today's brief ↗</button>
+  </div>
+
+  <!-- BRIEF -->
+  <div id="p-brief" class="panel">
+    <div id="brief-empty" class="empty"><div class="icon">📋</div>Submit today's update to generate Bo's brief.</div>
+    <div id="brief-loading" style="display:none"><div class="loading"><div class="spinner"></div>Analyzing today's update...</div></div>
+    <div id="brief-content" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="section-label" style="margin-bottom:0">Today's brief</div>
+        <span class="badge b-gray" id="brief-date"></span>
+      </div>
+      <div id="brief-flags"></div>
+      <div class="card"><div class="card-title" style="margin-bottom:8px">What stands out today</div><div id="brief-highlights" class="prose"></div></div>
+      <div class="card"><div class="card-title" style="margin-bottom:8px">Therapy focus</div><div id="brief-therapy" class="prose"></div></div>
+      <div class="card"><div class="card-title" style="margin-bottom:8px">3 questions for the care team</div><ul class="q-list" id="brief-qs"></ul></div>
+      <div class="card"><div class="card-title" style="margin-bottom:8px">Watch for today</div><div id="brief-watch" class="prose"></div></div>
+      <div class="card"><div class="card-title" style="margin-bottom:8px">Action items</div><div id="brief-actions"></div></div>
+    </div>
+  </div>
+
+  <!-- RESEARCH -->
+  <div id="p-research" class="panel">
+    <div id="res-empty" class="empty"><div class="icon">🔬</div>Submit today's update to generate a TBI evidence brief.</div>
+    <div id="res-loading" style="display:none"><div class="loading"><div class="spinner"></div>Running TBI evidence analysis...</div></div>
+    <div id="res-content" style="display:none">
+      <div class="section-label">Evidence brief · Bo's profile · ~10 months post-injury</div>
+      <div class="card"><div class="card-head"><span class="card-title">Tier 1 — Standard of care</span><span class="badge b-teal">Established</span></div><div id="t1"></div></div>
+      <div class="card"><div class="card-head"><span class="card-title">Tier 2 — Promising · specialist-driven</span><span class="badge b-blue">Conditional</span></div><div id="t2"></div></div>
+      <div class="card"><div class="card-head"><span class="card-title">Tier 3 — Emerging · trial / watch</span><span class="badge b-purple">Emerging</span></div><div id="t3"></div></div>
+      <div class="card" style="border-color:var(--red)"><div class="card-head"><span class="card-title" style="color:var(--red-dk)">Avoid without specialist sign-off</span><span class="badge b-red">Caution</span></div><div id="t-avoid"></div></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="p-dashboard" class="panel">
+    <div id="dash-loading" style="display:none"><div class="loading"><div class="spinner"></div>Loading history...</div></div>
+    <div id="dash-empty" class="empty"><div class="icon">📊</div>Recovery trends will build here after your first update.</div>
+    <div id="dash-content" style="display:none">
+      <div class="section-label">Recovery dashboard</div>
+      <div class="grid2" id="dash-metrics"></div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">Trend — last 7 entries</div>
+        <canvas class="trend-chart" id="trend-canvas"></canvas>
+        <div id="domain-bars"></div>
+      </div>
+      <div class="card"><div class="card-title" style="margin-bottom:10px">Recent entries</div><div id="hist-list"></div></div>
+    </div>
+  </div>
+
+  <!-- DOCTOR -->
+  <div id="p-doctor" class="panel">
+    <div id="doc-empty" class="empty"><div class="icon">🏥</div>Submit today's update to generate a doctor-ready summary.</div>
+    <div id="doc-loading" style="display:none"><div class="loading"><div class="spinner"></div>Preparing doctor-ready summary...</div></div>
+    <div id="doc-content" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="section-label" style="margin-bottom:0">Doctor-ready summary</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="copy-btn" onclick="copyDoc()">Copy text</button>
+          <span class="badge b-gray" id="doc-date"></span>
+        </div>
+      </div>
+      <div class="print-block">
+        <div class="print-head">Patient background</div>
+        <div class="prose"><p>Adult male. Severe TBI from fall + multiple ischemic strokes from brain bleed over approximately 11 hours. Injury date: May 10, 2025. Completed 3-month inpatient rehabilitation at Craig Hospital (discharged ~August 2025). Currently on intrathecal baclofen pump — spasticity and neurostorming largely controlled. Approximately 10 months post-injury. Emerging consciousness — recently initiated yes/no communication via eye blinks.</p></div>
+      </div>
+      <div class="print-block"><div class="print-head">Today's status</div><div id="doc-status" class="prose"></div></div>
+      <div class="print-block"><div class="print-head">Questions for this appointment</div><ul class="q-list" id="doc-qs"></ul></div>
+      <div class="print-block"><div class="print-head">Therapy &amp; intervention items to discuss</div><ul class="q-list" id="doc-therapy"></ul></div>
+      <div class="disclaimer"><p>Generated by Bo's Recovery Copilot — AI research assistant for family and care team use. Does not constitute medical advice. All clinical decisions belong to Bo's care team.</p></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   CONFIG — no API keys here. Set these values:
+   • APP_PASSWORD  → Netlify env var
+   • SUPABASE_URL  → Netlify env var
+   • SUPABASE_KEY  → Netlify env var
+   The password below is the ONLY thing stored
+   client-side. Keep it simple — it's just a
+   shared team passcode, not a security system.
+   ════════════════════════════════════════════ */
+const CONFIG = {
+  password:    window.__APP_PASSWORD__    || 'changeme',
+  supabaseUrl: window.__SUPABASE_URL__    || '',
+  supabaseKey: window.__SUPABASE_KEY__    || '',
+};
+
+const BO = `PATIENT BACKGROUND (pre-loaded):
+- Adult male, severe TBI from fall + multiple ischemic strokes from brain bleed (~11 hours)
+- Injury date: May 10, 2025
+- 3-month inpatient rehab at Craig Hospital, discharged ~August 2025
+- Intrathecal baclofen pump — spasticity and neurostorming largely controlled
+- ~10 months post-injury
+- Emerging / mostly functionally conscious
+- KEY MILESTONE: recently started yes/no communication via eye blinks
+- Critical emergence window — not acute ICU, not chronic stable
+- Tool users: family and care team together`;
+
+let supabase = null;
+let sleepVal = 6;
+let R = {};
+let aiHistory = [];
+let docText = '';
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (CONFIG.supabaseUrl) {
+    try { supabase = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey); }
+    catch(e) { console.warn('Supabase init failed', e); }
+  }
+  if (sessionStorage.getItem('bo_auth') === 'ok') showApp();
+});
+
+function doLogin() {
+  const pw = document.getElementById('login-pw').value.trim();
+  if (pw === CONFIG.password) {
+    sessionStorage.setItem('bo_auth', 'ok');
+    showApp();
+  } else {
+    document.getElementById('login-err').textContent = 'Incorrect password.';
+  }
+}
+function doLogout() {
+  sessionStorage.removeItem('bo_auth');
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-pw').value = '';
+  document.getElementById('login-err').textContent = '';
+}
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'flex';
+}
+
+function nav(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  document.getElementById('p-' + id).classList.add('on');
+  btn.classList.add('on');
+  if (id === 'dashboard') loadDashboard();
+}
+
+function sel(domain, val, btn) {
+  R[domain] = val;
+  const c = document.getElementById('r-' + domain);
+  if (c) c.querySelectorAll('.pill').forEach(b => b.className = 'pill');
+  const map = { worse:'worse', same:'same', better:'better', new:'new', yes:'flagyes', no:'flagno' };
+  btn.classList.add(map[val] || 'same');
+  if (domain === 'flag') document.getElementById('flag-wrap').style.display = val === 'yes' ? 'block' : 'none';
+}
+
+function getTherapy() {
+  return Array.from(document.querySelectorAll('.cpill.on')).map(l => l.textContent.trim()).join(', ') || 'not recorded';
+}
+
+function buildUpdate() {
+  return `DAILY UPDATE — ${new Date().toLocaleDateString()}
+Eye blink communication: ${R.blinks || 'not rated'}
+Alertness: ${R.alert || 'not rated'}
+Motor/movement: ${R.motor || 'not rated'}
+Comfort/mood: ${R.mood || 'not rated'}
+Sleep: ${sleepVal} hrs
+Therapy today: ${getTherapy()}
+Notable observation: ${document.getElementById('f-note').value || 'None'}
+Urgent concerns: ${R.flag === 'yes' ? (document.getElementById('f-flag').value || 'Yes — no detail') : 'None'}`;
+}
+
+/* AI calls go through the Netlify function — no API key in this file */
+async function callAI(system, user) {
+  aiHistory.push({ role: 'user', content: user });
+  const resp = await fetch('/.netlify/functions/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ system, messages: aiHistory }),
+  });
+  if (!resp.ok) throw new Error(`Function error: ${resp.status}`);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  const text = data.content.map(c => c.type === 'text' ? c.text : '').join('');
+  aiHistory.push({ role: 'assistant', content: text });
+  return text;
+}
+
+function safeJSON(raw, fallback) {
+  try { return JSON.parse(raw.replace(/```json|```/g, '').trim()); }
+  catch(e) { return fallback; }
+}
+
+async function runAnalysis() {
+  const btn = document.getElementById('go-btn');
+  btn.disabled = true; btn.textContent = 'Analyzing...';
+  aiHistory = [];
+  const update = buildUpdate();
+
+  const sys = `You are a clinical research copilot for a TBI survivor's family and care team. Patient background below. Do NOT diagnose or prescribe. All clinical decisions belong to the care team. Respond ONLY in valid JSON. No preamble, no markdown fences.\n\n${BO}`;
+
+  document.querySelectorAll('.tab')[1].click();
+  ['brief','res','doc'].forEach(id => {
+    const e = document.getElementById(id+'-empty');
+    const l = document.getElementById(id+'-loading');
+    const c = document.getElementById(id+'-content');
+    if(e) e.style.display = 'none';
+    if(l) l.style.display = 'block';
+    if(c) c.style.display = 'none';
+  });
+
+  try {
+    const briefRaw = await callAI(sys,
+      `Given Bo's background and today's update, return JSON with keys:
+- highlights: array of 2-3 strings — what stands out today
+- therapy_focus: array of 2-3 strings — therapy emphasis today/tomorrow
+- questions: array of 3 sharp clinical questions for the care team
+- watch_for: array of 2 strings — what to monitor in next 24 hrs
+- actions: array of 3 concrete action items for the family
+- red_flag_priority: boolean
+- red_flag_note: string
+
+Update: ${update}`);
+    const brief = safeJSON(briefRaw, defaultBrief());
+    renderBrief(brief);
+
+    const resRaw = await callAI(sys,
+      `Same context. Return research JSON:
+- tier1: array of 3-4 {name,desc,evidence} — established TBI rehab priorities for Bo right now
+- tier2: array of 2-3 {name,desc,evidence} — promising specialist-driven items (amantadine, AAC, neuropsych)
+- tier3: array of 2 {name,desc,evidence} — trial/emerging items
+- avoid: array of 2 {name,reason}`);
+    const res = safeJSON(resRaw, defaultResearch());
+    renderResearch(res);
+
+    const docRaw = await callAI(sys,
+      `Same context. Return doctor summary JSON:
+- status: array of 2-3 clinical status strings
+- questions: array of 5 sharp clinical questions for next appointment
+- therapy_items: array of 3-4 therapy discussion points
+- plain_text: full doctor note as a plain text string`);
+    const doc = safeJSON(docRaw, defaultDoc());
+    renderDoc(doc);
+
+    if (supabase) {
+      await supabase.from('entries').insert({
+        entry_date: new Date().toISOString().split('T')[0],
+        blinks: R.blinks, alert: R.alert, motor: R.motor, mood: R.mood,
+        sleep: sleepVal, therapy: getTherapy(),
+        note: document.getElementById('f-note').value,
+        flag_note: R.flag === 'yes' ? document.getElementById('f-flag').value : '',
+        brief, research: res
+      });
+    }
+
+    btn.textContent = 'Generate today\'s brief ↗';
+    btn.disabled = false;
+
+  } catch(err) {
+    console.error(err);
+    btn.textContent = 'Error — try again';
+    btn.disabled = false;
+    ['brief','res','doc'].forEach(id => {
+      const l = document.getElementById(id+'-loading');
+      const e = document.getElementById(id+'-empty');
+      if(l) l.style.display = 'none';
+      if(e) { e.style.display = 'block'; e.innerHTML = `<div class="icon">⚠️</div>${err.message}`; }
+    });
+  }
+}
+
+function renderBrief(b) {
+  document.getElementById('brief-loading').style.display = 'none';
+  document.getElementById('brief-content').style.display = 'block';
+  document.getElementById('brief-date').textContent = new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+  const flags = document.getElementById('brief-flags');
+  flags.innerHTML = (b.red_flag_priority && b.red_flag_note)
+    ? `<div class="flag-bar"><div class="flag-dot"></div><div class="flag-txt"><strong>Flag: </strong>${b.red_flag_note}</div></div>` : '';
+  document.getElementById('brief-highlights').innerHTML = (b.highlights||[]).map(s=>`<p>${s}</p>`).join('');
+  document.getElementById('brief-therapy').innerHTML   = (b.therapy_focus||[]).map(s=>`<p>${s}</p>`).join('');
+  document.getElementById('brief-qs').innerHTML        = (b.questions||[]).map((q,i)=>`<li class="q-item"><span class="q-num">${i+1}</span>${q}</li>`).join('');
+  document.getElementById('brief-watch').innerHTML     = (b.watch_for||[]).map(s=>`<p>${s}</p>`).join('');
+  document.getElementById('brief-actions').innerHTML   = (b.actions||[]).map((a,i)=>`
+    <div class="act-item">
+      <div class="chk" id="c${i}" onclick="toggleAct(${i})"></div>
+      <div class="act-txt" id="ct${i}">${a}</div>
+    </div>`).join('');
+}
+
+function toggleAct(i) {
+  const c = document.getElementById('c'+i), t = document.getElementById('ct'+i);
+  const on = c.classList.toggle('done');
+  t.classList.toggle('done', on);
+  c.innerHTML = on ? `<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>` : '';
+}
+
+function renderResearch(res) {
+  document.getElementById('res-loading').style.display = 'none';
+  document.getElementById('res-content').style.display = 'block';
+  function tier(id, items) {
+    const el = document.getElementById(id);
+    if (!items || !items.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0">None flagged for current profile</div>'; return; }
+    el.innerHTML = items.map(x=>`<div class="tier-item">
+      <div class="tier-name">${x.name}</div>
+      <div class="tier-desc">${x.desc||x.reason||''}</div>
+      ${x.evidence?`<span class="badge b-teal" style="margin-top:5px">${x.evidence}</span>`:''}
+    </div>`).join('');
+  }
+  tier('t1',res.tier1); tier('t2',res.tier2); tier('t3',res.tier3);
+  document.getElementById('t-avoid').innerHTML = (res.avoid||[]).map(x=>`<div class="tier-item"><div class="tier-name">${x.name}</div><div class="tier-desc">${x.reason||''}</div></div>`).join('');
+}
+
+function renderDoc(doc) {
+  document.getElementById('doc-loading').style.display = 'none';
+  document.getElementById('doc-content').style.display = 'block';
+  document.getElementById('doc-date').textContent = new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+  document.getElementById('doc-status').innerHTML   = (doc.status||[]).map(s=>`<p>${s}</p>`).join('');
+  document.getElementById('doc-qs').innerHTML       = (doc.questions||[]).map((q,i)=>`<li class="q-item"><span class="q-num">${i+1}</span>${q}</li>`).join('');
+  document.getElementById('doc-therapy').innerHTML  = (doc.therapy_items||[]).map((t,i)=>`<li class="q-item"><span class="q-num">${i+1}</span>${t}</li>`).join('');
+  docText = doc.plain_text || 'Summary not generated.';
+}
+
+function copyDoc() {
+  navigator.clipboard.writeText(docText).then(() => {
+    const b = document.querySelector('.copy-btn'); b.textContent = 'Copied!';
+    setTimeout(() => b.textContent = 'Copy text', 2200);
+  });
+}
+
+async function loadDashboard() {
+  if (!supabase) {
+    document.getElementById('dash-empty').style.display = 'block';
+    document.getElementById('dash-empty').innerHTML = '<div class="icon">📊</div>Connect Supabase to see trends across days.';
+    return;
+  }
+  document.getElementById('dash-loading').style.display = 'block';
+  document.getElementById('dash-empty').style.display = 'none';
+  document.getElementById('dash-content').style.display = 'none';
+  try {
+    const { data, error } = await supabase.from('entries').select('*').order('created_at', { ascending: false }).limit(30);
+    if (error) throw error;
+    document.getElementById('dash-loading').style.display = 'none';
+    if (!data || !data.length) {
+      document.getElementById('dash-empty').style.display = 'block';
+    } else {
+      renderDashboard(data);
+    }
+  } catch(e) {
+    document.getElementById('dash-loading').style.display = 'none';
+    document.getElementById('dash-empty').style.display = 'block';
+    document.getElementById('dash-empty').textContent = 'Could not load history. Check Supabase config.';
+  }
+}
+
+function domScore(val) {
+  return { worse:1, same:3, better:4, new:5 }[val] || null;
+}
+
+function renderDashboard(entries) {
+  document.getElementById('dash-content').style.display = 'block';
+  const latest = entries[0];
+  const recent = entries.slice(0, 7).reverse();
+
+  const streak = calcStreak(entries);
+  const avgSleep = entries.length ? +(entries.reduce((a,e) => a+(e.sleep||0),0)/entries.length).toFixed(1) : 0;
+  const blinkGood = recent.filter(e => e.blinks === 'better' || e.blinks === 'new').length;
+
+  document.getElementById('dash-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Days logged</div><div class="metric-val">${entries.length}</div><div class="metric-sub">Total entries</div></div>
+    <div class="metric"><div class="metric-label">Current streak</div><div class="metric-val">${streak} <span style="font-size:13px;font-weight:400">days</span></div><div class="metric-sub">Consecutive</div></div>
+    <div class="metric"><div class="metric-label">Avg sleep</div><div class="metric-val">${avgSleep} <span style="font-size:13px;font-weight:400">hrs</span></div><div class="metric-sub">All entries</div></div>
+    <div class="metric"><div class="metric-label">Blink progress</div><div class="metric-val">${blinkGood}<span style="font-size:13px;font-weight:400">/7</span></div><div class="metric-sub">Better or new last 7</div></div>`;
+
+  const domains = [{key:'blinks',label:'Eye blinks'},{key:'alert',label:'Alertness'},{key:'motor',label:'Motor'},{key:'mood',label:'Comfort'}];
+  document.getElementById('domain-bars').innerHTML = domains.map(d => {
+    const v = domScore(latest[d.key]);
+    const pct = v ? Math.round((v/5)*100) : 0;
+    const col = v >= 4 ? 'var(--teal)' : v === 3 ? 'var(--blue)' : v ? '#EF9F27' : 'var(--border)';
+    return `<div class="bar-row">
+      <div class="bar-lbl">${d.label}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
+      <div class="bar-val">${latest[d.key] || '—'}</div>
+    </div>`;
+  }).join('');
+
+  drawTrend(recent);
+
+  document.getElementById('hist-list').innerHTML = entries.slice(0,10).map(e => {
+    const d = new Date(e.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const bc = e.blinks === 'better' || e.blinks === 'new' ? 'b-teal' : e.blinks === 'worse' ? 'b-red' : 'b-gray';
+    const ac = e.alert === 'better' ? 'b-teal' : e.alert === 'worse' ? 'b-red' : 'b-gray';
+    return `<div class="hist-item">
+      <div><div class="hist-date">${d}</div><div class="hist-note">${e.note || 'No note'}</div></div>
+      <div class="hist-badges">
+        ${e.blinks?`<span class="badge ${bc}" style="font-size:10px">${e.blinks}</span>`:''}
+        ${e.alert ?`<span class="badge ${ac}" style="font-size:10px">alert: ${e.alert}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function calcStreak(entries) {
+  if (!entries.length) return 0;
+  let s = 1;
+  for (let i = 0; i < entries.length - 1; i++) {
+    const diff = Math.round((new Date(entries[i].created_at) - new Date(entries[i+1].created_at)) / 86400000);
+    if (diff <= 1) s++; else break;
+  }
+  return s;
+}
+
+function drawTrend(entries) {
+  const canvas = document.getElementById('trend-canvas');
+  if (!canvas || entries.length < 2) return;
+  const W = canvas.offsetWidth || 400, H = 120;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const keys = ['blinks','alert','motor','mood'];
+  const colors = ['#1D9E75','#378ADD','#7F77DD','#BA7517'];
+  const labels = ['Blinks','Alert','Motor','Comfort'];
+  keys.forEach((key,ki) => {
+    const pts = entries.map((e,i) => ({x:i, y:domScore(e[key])})).filter(p => p.y);
+    if (pts.length < 2) return;
+    ctx.beginPath(); ctx.strokeStyle = colors[ki]; ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
+    pts.forEach((p,i) => {
+      const x = (p.x/(entries.length-1))*(W-20)+10;
+      const y = H-20-((p.y-1)/4)*(H-35);
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+  labels.forEach((lbl,ki) => {
+    ctx.fillStyle = colors[ki]; ctx.fillRect(10+ki*80, H-14, 8, 8);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text3') || '#999';
+    ctx.font = '10px system-ui'; ctx.fillText(lbl, 22+ki*80, H-6);
+  });
+}
+
+/* ── FALLBACKS ── */
+function defaultBrief() {
+  return { highlights:['Update received. Eye blink communication is the most significant active milestone.','Consistent daily logging will reveal patterns over time.'], therapy_focus:['Prioritize SLP involvement to structure and expand the eye blink system.','Maintain PT/OT intensity — plasticity window at 10 months is still active.'], questions:['Is there a formal AAC assessment plan now that yes/no blinks are reliable?','What is the current clinical classification of Bo\'s consciousness level?','Is there a structured protocol for expanding communication beyond yes/no?'], watch_for:['Consistency of eye blink responses across different times of day.','Sleep quality and how it affects daytime engagement.'], actions:['Note the time of day when eye blinks are most reliable','Raise today\'s questions with the care team','Log any new movements or communication patterns observed'], red_flag_priority:false, red_flag_note:'' };
+}
+function defaultResearch() {
+  return { tier1:[{name:'AAC development',desc:'Yes/no eye blinks established — SLP-led AAC assessment is now the top communication priority.',evidence:'Strong — TBI communication guidelines'},{name:'Intensive multidisciplinary rehab',desc:'Post-Craig does not mean rehab ends. 10 months is still within the active neuroplasticity window.',evidence:'Strong — NICE NG252, AHA/ASA'},{name:'Command-following expansion',desc:'Systematic building from yes/no toward more complex commands is central to emerging consciousness rehab.',evidence:'Strong — AAN disorders of consciousness guideline'}], tier2:[{name:'Amantadine — confirm status',desc:'AAN guideline supports amantadine for traumatic disorders of consciousness. Worth confirming current status with neurology/PM&R.',evidence:'AAN Guideline — reaffirmed 2024'},{name:'Baclofen pump review',desc:'Settings should be reviewed periodically as consciousness and voluntary movement improve.',evidence:'Specialist-driven — PM&R'},{name:'Neuropsychological assessment',desc:'Formal testing becomes possible as communication expands. Helps set accurate rehab goals.',evidence:'Standard practice'}], tier3:[{name:'BCI communication research',desc:'Brain-computer interface systems for minimally conscious patients may become relevant. Worth tracking trial landscape.',evidence:'Emerging — ClinicalTrials.gov'},{name:'Craig alumni follow-up',desc:'Craig runs post-discharge research programs. Worth checking for trial eligibility.',evidence:'Site-specific'}], avoid:[{name:'Consumer devices without specialist evaluation',reason:'AAC and neuromodulation device selection requires professional assessment.'},{name:'Conclusions from a single day',reason:'TBI recovery is non-linear. Look for patterns across days, not moments.'}] };
+}
+function defaultDoc() {
+  return { status:['Adult male. Severe TBI from fall + ischemic strokes from brain bleed ~11 hours. Injury May 10, 2025. Craig Hospital 3-month inpatient rehab.','Intrathecal baclofen pump in place. ~10 months post-injury. Emerging consciousness — recently began yes/no communication via eye blinks.'], questions:['AAC assessment plan now that yes/no eye blinks are reliable?','Is Bo currently on amantadine? If not, appropriate at 10 months?','Current clinical classification of consciousness level?','Baclofen pump parameter review as awareness expands?','Measurable milestones for next 60–90 days?'], therapy_items:['SLP/AAC assessment and communication system development','PT/OT outpatient continuation plan post-Craig','Neuropsychological evaluation timeline','Family communication protocol training'], plain_text:`RECOVERY UPDATE — ${new Date().toLocaleDateString()}\n\nPATIENT: Adult male. Severe TBI (fall) + ischemic strokes from brain bleed ~11 hours. Injury: May 10, 2025. Craig Hospital x3 months. Baclofen pump in place. ~10 months post-injury.\n\nSTATUS: Emerging consciousness. Recently established yes/no via eye blinks.\n\nQUESTIONS:\n1. AAC plan now that eye blinks are reliable?\n2. Amantadine status?\n3. Current consciousness classification?\n4. Baclofen pump review?\n5. Next 60-90 day milestones?\n\nTHERAPY ITEMS:\n- SLP/AAC development\n- PT/OT outpatient plan\n- Neuropsych evaluation\n- Family protocol training\n\nGenerated by Bo's Recovery Copilot — not medical advice.` };
+}
+</script>
+</body>
+</html>
