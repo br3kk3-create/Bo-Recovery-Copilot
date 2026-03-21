@@ -84,7 +84,7 @@
   .pill.flagno { background: var(--bg2);       border-color: var(--border2); color: var(--text); }
 
   .check-row { display: flex; gap: 6px; flex-wrap: wrap; }
-  .cpill { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border2); font-size: 12px; color: var(--text2); cursor: pointer; user-select: none; transition: all .1s; }
+  .cpill { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border2); font-size: 12px; color: var(--text2); cursor: pointer; user-select: none; transition: all .1s; background: var(--bg); font-family: inherit; }
   .cpill.on { background: var(--teal-lt); border-color: var(--teal); color: var(--teal-dk); }
   .cpill input { display: none; }
 
@@ -267,12 +267,14 @@
     </div>
 
     <div class="frow">
-      <div class="flabel">Therapy today</div>
-      <div class="check-row">
-        <label class="cpill" onclick="this.classList.toggle('on')"><input type="checkbox">PT</label>
-        <label class="cpill" onclick="this.classList.toggle('on')"><input type="checkbox">OT</label>
-        <label class="cpill" onclick="this.classList.toggle('on')"><input type="checkbox">SLP</label>
-        <label class="cpill" onclick="this.classList.toggle('on')"><input type="checkbox">None today</label>
+      <div class="flabel">Therapy today <span class="flabel-hint">select all that apply</span></div>
+      <div class="check-row" id="therapy-row">
+        <button class="cpill" onclick="toggleTherapy(this)">PT</button>
+        <button class="cpill" onclick="toggleTherapy(this)">OT</button>
+        <button class="cpill" onclick="toggleTherapy(this)">Speech</button>
+        <button class="cpill" onclick="toggleTherapy(this)">Music</button>
+        <button class="cpill" onclick="toggleTherapy(this)">Neuropsych</button>
+        <button class="cpill" onclick="toggleTherapy(this)">None today</button>
       </div>
     </div>
 
@@ -460,8 +462,12 @@ function sel(domain, val, btn) {
   if (domain === 'flag') document.getElementById('flag-wrap').style.display = val === 'yes' ? 'block' : 'none';
 }
 
+function toggleTherapy(btn) {
+  btn.classList.toggle('on');
+}
+
 function getTherapy() {
-  return Array.from(document.querySelectorAll('.cpill.on')).map(l => l.textContent.trim()).join(', ') || 'not recorded';
+  return Array.from(document.querySelectorAll('#therapy-row .cpill.on')).map(b => b.textContent.trim()).join(', ') || 'not recorded';
 }
 
 function buildUpdate() {
