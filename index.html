@@ -379,18 +379,22 @@
 
 <script>
 /* ════════════════════════════════════════════
-   CONFIG — no API keys here. Set these values:
-   • APP_PASSWORD  → Netlify env var
-   • SUPABASE_URL  → Netlify env var
-   • SUPABASE_KEY  → Netlify env var
-   The password below is the ONLY thing stored
-   client-side. Keep it simple — it's just a
-   shared team passcode, not a security system.
+   STEP 1 — Set your team password right here:
    ════════════════════════════════════════════ */
+const TEAM_PASSWORD = 'B0Lieve!'; // <-- replace this with your password
+
+/* ════════════════════════════════════════════
+   STEP 2 — Supabase (optional, for dashboard)
+   Paste your values from supabase.com or leave
+   blank — the app works without it.
+   ════════════════════════════════════════════ */
+const SUPABASE_URL = '';  // e.g. 'https://xxxx.supabase.co'
+const SUPABASE_KEY = '';  // anon public key
+
 const CONFIG = {
-  password:    window.__APP_PASSWORD__    || 'B0Lieve!',
-  supabaseUrl: window.__SUPABASE_URL__    || '',
-  supabaseKey: window.__SUPABASE_KEY__    || '',
+  password:    TEAM_PASSWORD,
+  supabaseUrl: SUPABASE_URL,
+  supabaseKey: SUPABASE_KEY,
 };
 
 const BO = `PATIENT BACKGROUND (pre-loaded):
