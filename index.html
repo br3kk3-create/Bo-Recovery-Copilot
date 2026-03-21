@@ -408,7 +408,7 @@ const BO = `PATIENT BACKGROUND (pre-loaded):
 - Critical emergence window — not acute ICU, not chronic stable
 - Tool users: family and care team together`;
 
-let supabase = null;
+let db = null;
 let sleepVal = 6;
 let R = {};
 let aiHistory = [];
@@ -416,7 +416,7 @@ let docText = '';
 
 window.addEventListener('DOMContentLoaded', () => {
   if (CONFIG.supabaseUrl) {
-    try { supabase = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey); }
+    try { db = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey); }
     catch(e) { console.warn('Supabase init failed', e); }
   }
   if (sessionStorage.getItem('bo_auth') === 'ok') showApp();
@@ -548,8 +548,8 @@ Update: ${update}`);
     const doc = safeJSON(docRaw, defaultDoc());
     renderDoc(doc);
 
-    if (supabase) {
-      await supabase.from('entries').insert({
+    if (db) {
+      await db.from('entries').insert({
         entry_date: new Date().toISOString().split('T')[0],
         blinks: R.blinks, alert: R.alert, motor: R.motor, mood: R.mood,
         sleep: sleepVal, therapy: getTherapy(),
@@ -634,7 +634,7 @@ function copyDoc() {
 }
 
 async function loadDashboard() {
-  if (!supabase) {
+  if (!db) {
     document.getElementById('dash-empty').style.display = 'block';
     document.getElementById('dash-empty').innerHTML = '<div class="icon">📊</div>Connect Supabase to see trends across days.';
     return;
@@ -643,7 +643,7 @@ async function loadDashboard() {
   document.getElementById('dash-empty').style.display = 'none';
   document.getElementById('dash-content').style.display = 'none';
   try {
-    const { data, error } = await supabase.from('entries').select('*').order('created_at', { ascending: false }).limit(30);
+    const { data, error } = await db.from('entries').select('*').order('created_at', { ascending: false }).limit(30);
     if (error) throw error;
     document.getElementById('dash-loading').style.display = 'none';
     if (!data || !data.length) {
