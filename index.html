@@ -419,8 +419,12 @@ let docText = '';
 
 window.addEventListener('DOMContentLoaded', () => {
   if (CONFIG.supabaseUrl) {
-    try { db = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey); }
-    catch(e) { console.warn('Supabase init failed', e); }
+    try {
+      db = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
+      console.log('Supabase init OK:', CONFIG.supabaseUrl.substring(0,30));
+    } catch(e) { console.error('Supabase init failed:', e); }
+  } else {
+    console.warn('Supabase URL empty');
   }
   if (sessionStorage.getItem('bo_auth') === 'ok') showApp();
 });
@@ -552,7 +556,8 @@ Update: ${update}`;
     renderDoc(doc);
 
     if (db) {
-      await db.from('entries').insert({
+      console.log('Attempting Supabase save...');
+      const { error: saveError } = await db.from('entries').insert({
         entry_date: new Date().toISOString().split('T')[0],
         blinks: R.blinks, alert: R.alert, motor: R.motor, mood: R.mood,
         sleep: sleepVal, therapy: getTherapy(),
@@ -560,6 +565,13 @@ Update: ${update}`;
         flag_note: R.flag === 'yes' ? document.getElementById('f-flag').value : '',
         brief, research: res
       });
+      if (saveError) {
+        console.error('Supabase save error:', JSON.stringify(saveError));
+      } else {
+        console.log('Supabase save successful');
+      }
+    } else {
+      console.warn('db is null — Supabase not initialized');
     }
 
     btn.textContent = 'Generate today\'s brief ↗';
