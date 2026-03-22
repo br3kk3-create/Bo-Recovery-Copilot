@@ -5,16 +5,6 @@ export default async (request) => {
 
   try {
     const apiKey = Netlify.env.get('ANTHROPIC_API_KEY');
-
-    // Debug: return key info without exposing the full key
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API key not found in environment' }), {
-        status: 500, headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const keyPreview = apiKey.substring(0, 12) + '...' + apiKey.substring(apiKey.length - 4);
-
     const body = await request.json();
 
     const callAnthropic = (userMessage) =>
@@ -38,15 +28,6 @@ export default async (request) => {
       callAnthropic(body.researchPrompt),
       callAnthropic(body.docPrompt),
     ]);
-
-    // Check if Anthropic returned an error
-    if (briefData.error) {
-      return new Response(JSON.stringify({
-        error: briefData.error.message,
-        keyPreview,
-        type: briefData.error.type
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    }
 
     return new Response(JSON.stringify({ briefData, researchData, docData }), {
       status: 200,
