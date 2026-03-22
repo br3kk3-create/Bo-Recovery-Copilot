@@ -1,32 +1,39 @@
-export default async (request, context) => {
+export default async (request) => {
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
   try {
+    const apiKey = Netlify.env.get('ANTHROPIC_API_KEY');
     const body = await request.json();
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': Netlify.env.get('ANTHROPIC_API_KEY'),
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: body.system,
-        messages: body.messages,
-      }),
-    });
+    const callAnthropic = (userMessage) =>
+      fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1000,
+          system: body.system,
+          messages: [{ role: 'user', content: userMessage }],
+        }),
+      }).then(r => r.json());
 
-    const data = await response.json();
+    const [briefData, researchData, docData] = await Promise.all([
+      callAnthropic(body.briefPrompt),
+      callAnthropic(body.researchPrompt),
+      callAnthropic(body.docPrompt),
+    ]);
 
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ briefData, researchData, docData }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
+
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
@@ -36,4 +43,3 @@ export default async (request, context) => {
 };
 
 export const config = { path: '/.netlify/functions/chat' };
-
