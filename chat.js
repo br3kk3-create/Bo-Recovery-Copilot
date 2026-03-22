@@ -1,37 +1,46 @@
-exports.handler = async function (event) {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method not allowed' };
+export default async (request) => {
+  if (request.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
   }
 
   try {
-    const body = JSON.parse(event.body);
+    const body = await request.json();
+    const apiKey = Netlify.env.get('ANTHROPIC_API_KEY');
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: body.system,
-        messages: body.messages,
-      }),
+    const call = (userMessage) =>
+      fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: body.system,
+          messages: [{ role: 'user', content: userMessage }],
+        }),
+      }).then(r => r.json());
+
+    // Run all 3 AI calls in parallel
+    const [briefData, researchData, docData] = await Promise.all([
+      call(body.briefPrompt),
+      call(body.researchPrompt),
+      call(body.docPrompt),
+    ]);
+
+    return new Response(JSON.stringify({ briefData, researchData, docData }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
 
-    const data = await response.json();
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    };
   } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
-    };
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };
+
+export const config = { path: '/.netlify/functions/chat' };
