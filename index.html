@@ -483,31 +483,18 @@ Notable observation: ${document.getElementById('f-note').value || 'None'}
 Urgent concerns: ${R.flag === 'yes' ? (document.getElementById('f-flag').value || 'Yes — no detail') : 'None'}`;
 }
 
-/* AI calls go through the Netlify function — no API key in this file */
-async function callAI(system, user) {
-  aiHistory.push({ role: 'user', content: user });
-  const resp = await fetch('/.netlify/functions/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ system, messages: aiHistory }),
-  });
-  if (!resp.ok) throw new Error(`Function error: ${resp.status}`);
-  const data = await resp.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  const text = data.content.map(c => c.type === 'text' ? c.text : '').join('');
-  aiHistory.push({ role: 'assistant', content: text });
-  return text;
-}
-
 function safeJSON(raw, fallback) {
   try { return JSON.parse(raw.replace(/```json|```/g, '').trim()); }
   catch(e) { return fallback; }
 }
 
+function extractText(data) {
+  return (data.content || []).map(c => c.type === 'text' ? c.text : '').join('');
+}
+
 async function runAnalysis() {
   const btn = document.getElementById('go-btn');
   btn.disabled = true; btn.textContent = 'Analyzing...';
-  aiHistory = [];
   const update = buildUpdate();
 
   const sys = `You are a clinical research copilot for a TBI survivor's family and care team. Patient background below. Do NOT diagnose or prescribe. All clinical decisions belong to the care team. Respond ONLY in valid JSON. No preamble, no markdown fences.\n\n${BO}`;
@@ -523,8 +510,7 @@ async function runAnalysis() {
   });
 
   try {
-    const briefRaw = await callAI(sys,
-      `Given Bo's background and today's update, return JSON with keys:
+    const briefPrompt = `Given Bo's background and today's update, return JSON with keys:
 - highlights: array of 2-3 strings — what stands out today
 - therapy_focus: array of 2-3 strings — therapy emphasis today/tomorrow
 - questions: array of 3 sharp clinical questions for the care team
@@ -532,27 +518,37 @@ async function runAnalysis() {
 - actions: array of 3 concrete action items for the family
 - red_flag_priority: boolean
 - red_flag_note: string
+Update: ${update}`;
 
-Update: ${update}`);
-    const brief = safeJSON(briefRaw, defaultBrief());
-    renderBrief(brief);
-
-    const resRaw = await callAI(sys,
-      `Same context. Return research JSON:
+    const researchPrompt = `Given Bo's background and today's update, return research JSON:
 - tier1: array of 3-4 {name,desc,evidence} — established TBI rehab priorities for Bo right now
 - tier2: array of 2-3 {name,desc,evidence} — promising specialist-driven items (amantadine, AAC, neuropsych)
 - tier3: array of 2 {name,desc,evidence} — trial/emerging items
-- avoid: array of 2 {name,reason}`);
-    const res = safeJSON(resRaw, defaultResearch());
-    renderResearch(res);
+- avoid: array of 2 {name,reason}
+Update: ${update}`;
 
-    const docRaw = await callAI(sys,
-      `Same context. Return doctor summary JSON:
+    const docPrompt = `Given Bo's background and today's update, return doctor summary JSON:
 - status: array of 2-3 clinical status strings
 - questions: array of 5 sharp clinical questions for next appointment
 - therapy_items: array of 3-4 therapy discussion points
-- plain_text: full doctor note as a plain text string`);
-    const doc = safeJSON(docRaw, defaultDoc());
+- plain_text: full doctor note as a plain text string
+Update: ${update}`;
+
+    const resp = await fetch('/.netlify/functions/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: sys, briefPrompt, researchPrompt, docPrompt }),
+    });
+    if (!resp.ok) throw new Error(`Function error: ${resp.status}`);
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error);
+
+    const brief = safeJSON(extractText(result.briefData), defaultBrief());
+    const res   = safeJSON(extractText(result.researchData), defaultResearch());
+    const doc   = safeJSON(extractText(result.docData), defaultDoc());
+
+    renderBrief(brief);
+    renderResearch(res);
     renderDoc(doc);
 
     if (db) {
