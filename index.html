@@ -185,6 +185,29 @@
   .act-txt.done { text-decoration: line-through; color: var(--text3); }
 
 
+
+  /* ── POLISHED UPDATE FORM ── */
+  .update-header { text-align: center; padding: 4px 0 16px; }
+  .update-date { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .update-tagline { font-size: 12px; color: var(--text3); }
+
+  .form-section { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+  .form-section-title { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .form-section-icon { font-size: 15px; }
+  .form-field { margin-bottom: 12px; }
+  .form-field:last-child { margin-bottom: 0; }
+  .form-field-label { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 7px; }
+  .form-field-hint { font-size: 11px; font-weight: 400; color: var(--text3); }
+  .slider-end { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+
+  /* ── LIMB GRID ── */
+  .limb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .limb-item { background: var(--bg2); border-radius: var(--radius-sm); padding: 10px; }
+  .limb-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 7px; }
+  .limb-pills { gap: 4px; }
+  .limb-pills .pill { padding: 5px 8px; font-size: 11px; }
+
   /* ── COLLAPSIBLE ── */
   .collapsible { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
   .collapsible-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; background: var(--bg2); user-select: none; }
@@ -261,95 +284,179 @@
 
   <!-- UPDATE -->
   <div id="p-update" class="panel on">
-    <div class="form-intro">
-      <strong>Quick check-in · ~90 seconds</strong><br>
-      Bo's full history is pre-loaded. Just note what changed today.
+
+    <!-- DATE HEADER -->
+    <div class="update-header">
+      <div class="update-date" id="update-date"></div>
+      <div class="update-tagline">Bo's full history is pre-loaded · just note what changed</div>
     </div>
 
-    <div class="frow">
-      <div class="flabel">Eye blink communication <span class="flabel-hint">vs yesterday</span></div>
-      <div class="pills" id="r-blinks">
-        <button class="pill" onclick="sel('blinks','worse',this)">Fewer / less reliable</button>
-        <button class="pill" onclick="sel('blinks','same',this)">About the same</button>
-        <button class="pill" onclick="sel('blinks','better',this)">More / more reliable</button>
-        <button class="pill" onclick="sel('blinks','new',this)">New command / pattern</button>
+    <!-- SECTION: COMMUNICATION -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="form-section-icon">💬</span> Communication
+      </div>
+      <div class="form-field">
+        <div class="form-field-label">Eye blink communication <span class="form-field-hint">vs yesterday</span></div>
+        <div class="pills" id="r-blinks">
+          <button class="pill" onclick="sel('blinks','worse',this)">Fewer / less reliable</button>
+          <button class="pill" onclick="sel('blinks','same',this)">About the same</button>
+          <button class="pill" onclick="sel('blinks','better',this)">More / more reliable</button>
+          <button class="pill" onclick="sel('blinks','new',this)">New command / pattern</button>
+        </div>
       </div>
     </div>
 
-    <div class="frow">
-      <div class="flabel">Alertness &amp; engagement <span class="flabel-hint">vs yesterday</span></div>
-      <div class="pills" id="r-alert">
-        <button class="pill" onclick="sel('alert','worse',this)">Less alert</button>
-        <button class="pill" onclick="sel('alert','same',this)">About the same</button>
-        <button class="pill" onclick="sel('alert','better',this)">More alert</button>
+    <!-- SECTION: AWARENESS -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="form-section-icon">🧠</span> Awareness &amp; movement
+      </div>
+      <div class="form-field">
+        <div class="form-field-label">Alertness &amp; engagement <span class="form-field-hint">vs yesterday</span></div>
+        <div class="pills" id="r-alert">
+          <button class="pill" onclick="sel('alert','worse',this)">Less alert</button>
+          <button class="pill" onclick="sel('alert','same',this)">About the same</button>
+          <button class="pill" onclick="sel('alert','better',this)">More alert</button>
+        </div>
+      </div>
+      <div class="form-field">
+        <div class="form-field-label">Motor / movement <span class="form-field-hint">rate each limb vs yesterday</span></div>
+        <div class="limb-grid">
+          <div class="limb-item">
+            <div class="limb-label">Right arm</div>
+            <div class="pills limb-pills" id="r-rarm">
+              <button class="pill" onclick="sel('rarm','worse',this)">Worse</button>
+              <button class="pill" onclick="sel('rarm','same',this)">Same</button>
+              <button class="pill" onclick="sel('rarm','better',this)">Better</button>
+              <button class="pill" onclick="sel('rarm','new',this)">New</button>
+            </div>
+          </div>
+          <div class="limb-item">
+            <div class="limb-label">Left arm</div>
+            <div class="pills limb-pills" id="r-larm">
+              <button class="pill" onclick="sel('larm','worse',this)">Worse</button>
+              <button class="pill" onclick="sel('larm','same',this)">Same</button>
+              <button class="pill" onclick="sel('larm','better',this)">Better</button>
+              <button class="pill" onclick="sel('larm','new',this)">New</button>
+            </div>
+          </div>
+          <div class="limb-item">
+            <div class="limb-label">Right leg</div>
+            <div class="pills limb-pills" id="r-rleg">
+              <button class="pill" onclick="sel('rleg','worse',this)">Worse</button>
+              <button class="pill" onclick="sel('rleg','same',this)">Same</button>
+              <button class="pill" onclick="sel('rleg','better',this)">Better</button>
+              <button class="pill" onclick="sel('rleg','new',this)">New</button>
+            </div>
+          </div>
+          <div class="limb-item">
+            <div class="limb-label">Left leg</div>
+            <div class="pills limb-pills" id="r-lleg">
+              <button class="pill" onclick="sel('lleg','worse',this)">Worse</button>
+              <button class="pill" onclick="sel('lleg','same',this)">Same</button>
+              <button class="pill" onclick="sel('lleg','better',this)">Better</button>
+              <button class="pill" onclick="sel('lleg','new',this)">New</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-field">
+        <div class="form-field-label">Comfort &amp; mood <span class="form-field-hint">vs yesterday</span></div>
+        <div class="pills" id="r-mood">
+          <button class="pill" onclick="sel('mood','worse',this)">More distressed</button>
+          <button class="pill" onclick="sel('mood','same',this)">About the same</button>
+          <button class="pill" onclick="sel('mood','better',this)">Calmer / more comfortable</button>
+        </div>
       </div>
     </div>
 
-    <div class="frow">
-      <div class="flabel">Movement / motor <span class="flabel-hint">any limb, vs yesterday</span></div>
-      <div class="pills" id="r-motor">
-        <button class="pill" onclick="sel('motor','worse',this)">Less movement</button>
-        <button class="pill" onclick="sel('motor','same',this)">About the same</button>
-        <button class="pill" onclick="sel('motor','better',this)">More / stronger</button>
-        <button class="pill" onclick="sel('motor','new',this)">New movement seen</button>
+    <!-- SECTION: THERAPY & REST -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="form-section-icon">🏃</span> Therapy &amp; rest
+      </div>
+      <div class="form-field">
+        <div class="form-field-label">Therapy today <span class="form-field-hint">select all that apply</span></div>
+        <div class="check-row" id="therapy-row">
+          <button class="cpill" onclick="toggleTherapy(this)">PT</button>
+          <button class="cpill" onclick="toggleTherapy(this)">OT</button>
+          <button class="cpill" onclick="toggleTherapy(this)">Speech</button>
+          <button class="cpill" onclick="toggleTherapy(this)">Music</button>
+          <button class="cpill" onclick="toggleTherapy(this)">Neuropsych</button>
+          <button class="cpill" onclick="toggleTherapy(this)">Massage</button>
+          <button class="cpill" onclick="toggleTherapy(this)">None today</button>
+        </div>
+      </div>
+      <div class="form-field">
+        <div class="form-field-label">Sleep last night <span class="form-field-hint" id="sleep-disp">6 hrs</span></div>
+        <div class="sleep-row">
+          <span class="slider-end">0</span>
+          <input type="range" min="0" max="12" step="1" value="6" id="sleep-r"
+            oninput="sleepVal=+this.value;document.getElementById('sleep-disp').textContent=this.value+' hrs'">
+          <span class="slider-end">12 hrs</span>
+        </div>
       </div>
     </div>
 
-    <div class="frow">
-      <div class="flabel">Comfort &amp; mood <span class="flabel-hint">vs yesterday</span></div>
-      <div class="pills" id="r-mood">
-        <button class="pill" onclick="sel('mood','worse',this)">More distressed</button>
-        <button class="pill" onclick="sel('mood','same',this)">About the same</button>
-        <button class="pill" onclick="sel('mood','better',this)">Calmer / more comfortable</button>
+    <!-- SECTION: NUTRITION -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="form-section-icon">🥗</span> Nutrition &amp; hydration
+        <span class="form-field-hint" style="margin-left:6px">approximate</span>
+      </div>
+      <div class="form-field">
+        <div class="nutr-row">
+          <span class="nutr-label">Calories</span>
+          <input type="range" min="0" max="3000" step="50" value="1500" id="nutr-cal"
+            oninput="document.getElementById('nutr-cal-val').textContent=Math.round(+this.value/50)*50+' cal'">
+          <span class="nutr-val" id="nutr-cal-val">1500 cal</span>
+        </div>
+        <div class="nutr-row">
+          <span class="nutr-label">Protein</span>
+          <input type="range" min="0" max="150" step="5" value="60" id="nutr-prot"
+            oninput="document.getElementById('nutr-prot-val').textContent=this.value+'g'">
+          <span class="nutr-val" id="nutr-prot-val">60g</span>
+        </div>
+        <div class="nutr-row">
+          <span class="nutr-label">Water</span>
+          <input type="range" min="0" max="100" step="4" value="40" id="nutr-water"
+            oninput="document.getElementById('nutr-water-val').textContent=this.value+' oz'">
+          <span class="nutr-val" id="nutr-water-val">40 oz</span>
+        </div>
       </div>
     </div>
 
-    <div class="frow">
-      <div class="flabel">Therapy today <span class="flabel-hint">select all that apply</span></div>
-      <div class="check-row" id="therapy-row">
-        <button class="cpill" onclick="toggleTherapy(this)">PT</button>
-        <button class="cpill" onclick="toggleTherapy(this)">OT</button>
-        <button class="cpill" onclick="toggleTherapy(this)">Speech</button>
-        <button class="cpill" onclick="toggleTherapy(this)">Music</button>
-        <button class="cpill" onclick="toggleTherapy(this)">Neuropsych</button>
-        <button class="cpill" onclick="toggleTherapy(this)">Massage</button>
-        <button class="cpill" onclick="toggleTherapy(this)">None today</button>
+    <!-- SECTION: NOTES & FLAGS -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="form-section-icon">📝</span> Notes
+      </div>
+      <div class="form-field">
+        <div class="form-field-label">One thing worth noting <span class="form-field-hint">win, concern, or observation</span></div>
+        <textarea id="f-note" placeholder="e.g. Blinked yes/no reliably 3 times · Seemed tired after PT · New finger movement · Responded to family voice..."></textarea>
+      </div>
+      <div class="form-field">
+        <div class="form-field-label">Any urgent concerns? <span class="form-field-hint">fever, seizure, pump issue, sudden change</span></div>
+        <div class="pills" id="r-flag">
+          <button class="pill" onclick="sel('flag','no',this)">No concerns</button>
+          <button class="pill" onclick="sel('flag','yes',this)">Yes — describe below</button>
+        </div>
+        <div id="flag-wrap" style="display:none;margin-top:10px">
+          <textarea id="f-flag" placeholder="Describe the urgent concern..."></textarea>
+        </div>
       </div>
     </div>
-
-    <div class="frow">
-      <div class="flabel">Sleep last night <span class="flabel-hint" id="sleep-disp">6 hrs</span></div>
-      <div class="sleep-row">
-        <span style="font-size:12px;color:var(--text3)">0</span>
-        <input type="range" min="0" max="12" step="1" value="6" id="sleep-r"
-          oninput="sleepVal=+this.value;document.getElementById('sleep-disp').textContent=this.value+' hrs'">
-        <span style="font-size:12px;color:var(--text3)">12</span>
-      </div>
-    </div>
-
-    <div class="frow">
-      <div class="flabel">One thing worth noting <span class="flabel-hint">win, concern, or observation</span></div>
-      <textarea id="f-note" placeholder="e.g. Blinked yes/no reliably 3 times in a row · Seemed tired after PT · New finger movement · Responded to family voice..."></textarea>
-    </div>
-
-    <div class="frow">
-      <div class="flabel">Any urgent concerns? <span class="flabel-hint">fever, seizure, pump issue, sudden change</span></div>
-      <div class="pills" id="r-flag">
-        <button class="pill" onclick="sel('flag','no',this)">No</button>
-        <button class="pill" onclick="sel('flag','yes',this)">Yes — describe below</button>
-      </div>
-    </div>
-    <div id="flag-wrap" style="display:none;margin-top:-8px;margin-bottom:14px">
-      <textarea id="f-flag" placeholder="Describe the urgent concern..."></textarea>
-    </div>
-
 
     <!-- MEDS COLLAPSIBLE -->
     <div class="collapsible" id="meds-collapsible">
       <div class="collapsible-header" onclick="toggleCollapsible('meds')">
-        <div>
-          <div class="collapsible-title">Current medications</div>
-          <div class="collapsible-hint">Saved automatically · expand only if something changed</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">💊</span>
+          <div>
+            <div class="collapsible-title">Current medications</div>
+            <div class="collapsible-hint">Tap to expand · only if something changed</div>
+          </div>
         </div>
         <span class="collapsible-arrow" id="meds-arrow">▼</span>
       </div>
@@ -363,9 +470,12 @@
     <!-- SUPPLEMENTS COLLAPSIBLE -->
     <div class="collapsible" id="supps-collapsible">
       <div class="collapsible-header" onclick="toggleCollapsible('supps')">
-        <div>
-          <div class="collapsible-title">Current supplements</div>
-          <div class="collapsible-hint">Saved automatically · expand only if something changed</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">🌿</span>
+          <div>
+            <div class="collapsible-title">Current supplements</div>
+            <div class="collapsible-hint">Tap to expand · only if something changed</div>
+          </div>
         </div>
         <span class="collapsible-arrow" id="supps-arrow">▼</span>
       </div>
@@ -376,30 +486,13 @@
       </div>
     </div>
 
-    <!-- NUTRITION -->
-    <div class="frow">
-      <div class="flabel">Nutrition &amp; hydration today <span class="flabel-hint">approximate</span></div>
-      <div class="nutr-row">
-        <span class="nutr-label">Calories</span>
-        <input type="range" min="0" max="3000" step="50" value="1500" id="nutr-cal"
-          oninput="document.getElementById('nutr-cal-val').textContent=Math.round(+this.value/50)*50">
-        <span class="nutr-val" id="nutr-cal-val">1500</span>
-      </div>
-      <div class="nutr-row">
-        <span class="nutr-label">Protein (g)</span>
-        <input type="range" min="0" max="150" step="5" value="60" id="nutr-prot"
-          oninput="document.getElementById('nutr-prot-val').textContent=this.value">
-        <span class="nutr-val" id="nutr-prot-val">60 g</span>
-      </div>
-      <div class="nutr-row">
-        <span class="nutr-label">Water (oz)</span>
-        <input type="range" min="0" max="100" step="4" value="40" id="nutr-water"
-          oninput="document.getElementById('nutr-water-val').textContent=this.value">
-        <span class="nutr-val" id="nutr-water-val">40 oz</span>
-      </div>
+    <button class="submit-btn" id="go-btn" onclick="runAnalysis()">
+      Generate today's brief ↗
+    </button>
+    <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:10px;padding-bottom:8px">
+      Takes about 10 seconds · all tabs update at once
     </div>
 
-    <button class="submit-btn" id="go-btn" onclick="runAnalysis()">Generate today's brief ↗</button>
   </div>
 
   <!-- BRIEF -->
@@ -547,6 +640,12 @@ function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'flex';
   loadMedsSupps();
+  // Set today's date in update header
+  const dateEl = document.getElementById('update-date');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  }
+
 }
 
 function nav(id, btn) {
@@ -624,7 +723,10 @@ function buildUpdate() {
   return `DAILY UPDATE — ${new Date().toLocaleDateString()}
 Eye blink communication: ${R.blinks || 'not rated'}
 Alertness: ${R.alert || 'not rated'}
-Motor/movement: ${R.motor || 'not rated'}
+Right arm: ${R.rarm || 'not rated'}
+Left arm: ${R.larm || 'not rated'}
+Right leg: ${R.rleg || 'not rated'}
+Left leg: ${R.lleg || 'not rated'}
 Comfort/mood: ${R.mood || 'not rated'}
 Sleep: ${sleepVal} hrs
 Therapy today: ${getTherapy()}
@@ -708,7 +810,7 @@ Update: ${update}`;
       console.log('Attempting Supabase save...');
       const { error: saveError } = await db.from('entries').insert({
         entry_date: new Date().toISOString().split('T')[0],
-        blinks: R.blinks, alert: R.alert, motor: R.motor, mood: R.mood,
+        blinks: R.blinks, alert: R.alert, motor: (R.rarm||R.larm||R.rleg||R.lleg) ? `ra:${R.rarm||'-'} la:${R.larm||'-'} rl:${R.rleg||'-'} ll:${R.lleg||'-'}` : null, mood: R.mood,
         sleep: sleepVal, therapy: getTherapy(),
         note: document.getElementById('f-note').value,
         flag_note: R.flag === 'yes' ? document.getElementById('f-flag').value : '',
