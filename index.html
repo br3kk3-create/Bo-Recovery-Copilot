@@ -172,6 +172,32 @@
   .act-txt { font-size: 13px; color: var(--text); line-height: 1.6; }
   .act-txt.done { text-decoration: line-through; color: var(--text3); }
 
+
+  /* ── COLLAPSIBLE ── */
+  .collapsible { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
+  .collapsible-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; background: var(--bg2); user-select: none; }
+  .collapsible-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .collapsible-hint { font-size: 11px; color: var(--text3); }
+  .collapsible-arrow { font-size: 11px; color: var(--text3); transition: transform .2s; }
+  .collapsible-arrow.open { transform: rotate(180deg); }
+  .collapsible-body { display: none; padding: 12px 14px; border-top: 1px solid var(--border); }
+  .collapsible-body.open { display: block; }
+  .save-inline-btn { padding: 6px 14px; background: var(--teal); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; margin-top: 8px; }
+  .save-inline-btn:hover { opacity: 0.88; }
+  .saved-msg { font-size: 11px; color: var(--teal); margin-top: 6px; min-height: 16px; }
+
+  /* ── NUTRITION SLIDERS ── */
+  .nutr-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .nutr-label { font-size: 12px; color: var(--text2); min-width: 80px; }
+  .nutr-val { font-size: 13px; font-weight: 500; color: var(--text); min-width: 52px; text-align: right; }
+
+  /* ── MED TIMELINE in dashboard ── */
+  .med-timeline { margin-top: 4px; }
+  .med-entry { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .med-entry:last-child { border-bottom: none; }
+  .med-entry-date { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
+  .med-entry-text { font-size: 12px; color: var(--text); line-height: 1.6; white-space: pre-wrap; }
+  .med-changed { background: var(--amber-lt); border-radius: 3px; padding: 1px 5px; font-size: 10px; color: var(--amber); margin-left: 6px; font-weight: 500; }
   @media (max-width: 500px) { .topbar, .panel { padding: 10px 12px; } }
 </style>
 </head>
@@ -305,6 +331,62 @@
       <textarea id="f-flag" placeholder="Describe the urgent concern..."></textarea>
     </div>
 
+
+    <!-- MEDS COLLAPSIBLE -->
+    <div class="collapsible" id="meds-collapsible">
+      <div class="collapsible-header" onclick="toggleCollapsible('meds')">
+        <div>
+          <div class="collapsible-title">Current medications</div>
+          <div class="collapsible-hint">Saved automatically · expand only if something changed</div>
+        </div>
+        <span class="collapsible-arrow" id="meds-arrow">▼</span>
+      </div>
+      <div class="collapsible-body" id="meds-body">
+        <textarea id="f-meds" placeholder="List current meds, doses, and timing&#10;e.g. Amantadine 100mg BID&#10;Baclofen pump (intrathecal)&#10;Melatonin 5mg QHS&#10;..." style="min-height:90px"></textarea>
+        <button class="save-inline-btn" onclick="saveMeds()">Save medications</button>
+        <div class="saved-msg" id="meds-saved"></div>
+      </div>
+    </div>
+
+    <!-- SUPPLEMENTS COLLAPSIBLE -->
+    <div class="collapsible" id="supps-collapsible">
+      <div class="collapsible-header" onclick="toggleCollapsible('supps')">
+        <div>
+          <div class="collapsible-title">Current supplements</div>
+          <div class="collapsible-hint">Saved automatically · expand only if something changed</div>
+        </div>
+        <span class="collapsible-arrow" id="supps-arrow">▼</span>
+      </div>
+      <div class="collapsible-body" id="supps-body">
+        <textarea id="f-supps" placeholder="List current supplements&#10;e.g. Vitamin D3 5000 IU daily&#10;Omega-3 2g daily&#10;Magnesium glycinate 400mg QHS&#10;..." style="min-height:90px"></textarea>
+        <button class="save-inline-btn" onclick="saveSupps()">Save supplements</button>
+        <div class="saved-msg" id="supps-saved"></div>
+      </div>
+    </div>
+
+    <!-- NUTRITION -->
+    <div class="frow">
+      <div class="flabel">Nutrition &amp; hydration today <span class="flabel-hint">approximate</span></div>
+      <div class="nutr-row">
+        <span class="nutr-label">Calories</span>
+        <input type="range" min="0" max="3000" step="50" value="1500" id="nutr-cal"
+          oninput="document.getElementById('nutr-cal-val').textContent=Math.round(+this.value/50)*50">
+        <span class="nutr-val" id="nutr-cal-val">1500</span>
+      </div>
+      <div class="nutr-row">
+        <span class="nutr-label">Protein (g)</span>
+        <input type="range" min="0" max="150" step="5" value="60" id="nutr-prot"
+          oninput="document.getElementById('nutr-prot-val').textContent=this.value">
+        <span class="nutr-val" id="nutr-prot-val">60 g</span>
+      </div>
+      <div class="nutr-row">
+        <span class="nutr-label">Water (oz)</span>
+        <input type="range" min="0" max="100" step="4" value="40" id="nutr-water"
+          oninput="document.getElementById('nutr-water-val').textContent=this.value">
+        <span class="nutr-val" id="nutr-water-val">40 oz</span>
+      </div>
+    </div>
+
     <button class="submit-btn" id="go-btn" onclick="runAnalysis()">Generate today's brief ↗</button>
   </div>
 
@@ -350,6 +432,10 @@
         <div class="card-title" style="margin-bottom:12px">Trend — last 7 entries</div>
         <canvas class="trend-chart" id="trend-canvas"></canvas>
         <div id="domain-bars"></div>
+      </div>
+      <div class="card" id="med-timeline-card" style="display:none">
+        <div class="card-head"><span class="card-title">Medication &amp; supplement history</span><span class="badge b-amber">Timeline</span></div>
+        <div class="med-timeline" id="med-timeline"></div>
       </div>
       <div class="card"><div class="card-title" style="margin-bottom:10px">Recent entries</div><div id="hist-list"></div></div>
     </div>
@@ -448,6 +534,7 @@ function doLogout() {
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'flex';
+  loadMedsSupps();
 }
 
 function nav(id, btn) {
@@ -467,6 +554,49 @@ function sel(domain, val, btn) {
   if (domain === 'flag') document.getElementById('flag-wrap').style.display = val === 'yes' ? 'block' : 'none';
 }
 
+
+// ── COLLAPSIBLE ──
+function toggleCollapsible(id) {
+  const body = document.getElementById(id+'-body');
+  const arrow = document.getElementById(id+'-arrow');
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+// ── MEDS / SUPPLEMENTS — load from Supabase profile table ──
+// We store current meds/supps in localStorage as a simple cache
+// and snapshot them into each daily entry for timeline correlation
+function loadMedsSupps() {
+  const meds = localStorage.getItem('bo_meds') || '';
+  const supps = localStorage.getItem('bo_supps') || '';
+  if (meds) document.getElementById('f-meds').value = meds;
+  if (supps) document.getElementById('f-supps').value = supps;
+}
+
+function saveMeds() {
+  const val = document.getElementById('f-meds').value;
+  localStorage.setItem('bo_meds', val);
+  const msg = document.getElementById('meds-saved');
+  msg.textContent = 'Saved ✓';
+  setTimeout(() => { msg.textContent = ''; }, 2000);
+}
+
+function saveSupps() {
+  const val = document.getElementById('f-supps').value;
+  localStorage.setItem('bo_supps', val);
+  const msg = document.getElementById('supps-saved');
+  msg.textContent = 'Saved ✓';
+  setTimeout(() => { msg.textContent = ''; }, 2000);
+}
+
+function getNutrition() {
+  return {
+    calories: +document.getElementById('nutr-cal').value,
+    protein:  +document.getElementById('nutr-prot').value,
+    water:    +document.getElementById('nutr-water').value,
+  };
+}
+
 function toggleTherapy(btn) {
   btn.classList.toggle('on');
 }
@@ -476,6 +606,9 @@ function getTherapy() {
 }
 
 function buildUpdate() {
+  const n = getNutrition();
+  const medsNow = localStorage.getItem('bo_meds') || 'not recorded';
+  const suppsNow = localStorage.getItem('bo_supps') || 'not recorded';
   return `DAILY UPDATE — ${new Date().toLocaleDateString()}
 Eye blink communication: ${R.blinks || 'not rated'}
 Alertness: ${R.alert || 'not rated'}
@@ -483,6 +616,9 @@ Motor/movement: ${R.motor || 'not rated'}
 Comfort/mood: ${R.mood || 'not rated'}
 Sleep: ${sleepVal} hrs
 Therapy today: ${getTherapy()}
+Nutrition: ~${n.calories} cal · ~${n.protein}g protein · ~${n.water}oz water
+Current meds: ${medsNow}
+Current supplements: ${suppsNow}
 Notable observation: ${document.getElementById('f-note').value || 'None'}
 Urgent concerns: ${R.flag === 'yes' ? (document.getElementById('f-flag').value || 'Yes — no detail') : 'None'}`;
 }
@@ -555,6 +691,7 @@ Update: ${update}`;
     renderResearch(res);
     renderDoc(doc);
 
+    const nutr = getNutrition();
     if (db) {
       console.log('Attempting Supabase save...');
       const { error: saveError } = await db.from('entries').insert({
@@ -563,6 +700,11 @@ Update: ${update}`;
         sleep: sleepVal, therapy: getTherapy(),
         note: document.getElementById('f-note').value,
         flag_note: R.flag === 'yes' ? document.getElementById('f-flag').value : '',
+        meds: localStorage.getItem('bo_meds') || '',
+        supplements: localStorage.getItem('bo_supps') || '',
+        calories: nutr.calories,
+        protein: nutr.protein,
+        water: nutr.water,
         brief, research: res
       });
       if (saveError) {
@@ -710,14 +852,37 @@ function renderDashboard(entries) {
     const d = new Date(e.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric' });
     const bc = e.blinks === 'better' || e.blinks === 'new' ? 'b-teal' : e.blinks === 'worse' ? 'b-red' : 'b-gray';
     const ac = e.alert === 'better' ? 'b-teal' : e.alert === 'worse' ? 'b-red' : 'b-gray';
+    const nutrStr = (e.calories||e.protein||e.water) ? `${e.calories||0} cal · ${e.protein||0}g protein · ${e.water||0}oz water` : '';
     return `<div class="hist-item">
-      <div><div class="hist-date">${d}</div><div class="hist-note">${e.note || 'No note'}</div></div>
+      <div>
+        <div class="hist-date">${d}</div>
+        <div class="hist-note">${e.note || 'No note'}</div>
+        ${nutrStr ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${nutrStr}</div>` : ''}
+      </div>
       <div class="hist-badges">
         ${e.blinks?`<span class="badge ${bc}" style="font-size:10px">${e.blinks}</span>`:''}
         ${e.alert ?`<span class="badge ${ac}" style="font-size:10px">alert: ${e.alert}</span>`:''}
       </div>
     </div>`;
   }).join('');
+
+  // Med / supplement timeline — show entries where meds or supps exist, highlight changes
+  const medEntries = entries.filter(e => e.meds || e.supplements).slice(0, 15);
+  if (medEntries.length) {
+    document.getElementById('med-timeline-card').style.display = 'block';
+    let lastMeds = null, lastSupps = null;
+    document.getElementById('med-timeline').innerHTML = medEntries.reverse().map(e => {
+      const d = new Date(e.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+      const medsChanged = lastMeds !== null && e.meds !== lastMeds;
+      const suppsChanged = lastSupps !== null && e.supplements !== lastSupps;
+      lastMeds = e.meds; lastSupps = e.supplements;
+      return `<div class="med-entry">
+        <div class="med-entry-date">${d}${medsChanged ? '<span class="med-changed">MEDS CHANGED</span>' : ''}${suppsChanged ? '<span class="med-changed">SUPPS CHANGED</span>' : ''}</div>
+        ${e.meds ? `<div class="med-entry-text"><strong style="font-size:11px;color:var(--text3)">MEDS:</strong> ${e.meds}</div>` : ''}
+        ${e.supplements ? `<div class="med-entry-text" style="margin-top:4px"><strong style="font-size:11px;color:var(--text3)">SUPPS:</strong> ${e.supplements}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
 }
 
 function calcStreak(entries) {
