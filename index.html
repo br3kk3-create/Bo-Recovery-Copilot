@@ -2,7 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bo's Copilot">
+<meta name="theme-color" content="#1D9E75">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="apple-touch-startup-image" href="/splash.png">
+
 <title>Bo's Recovery Copilot</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -29,6 +38,9 @@
     }
   }
   html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg3); color: var(--text); }
+  /* Safe area for iPhone notch / Dynamic Island */
+  .topbar { padding-top: max(11px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .panel { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 
   /* ── LAYOUT ── */
   .app { max-width: 680px; margin: 0 auto; min-height: 100vh; background: var(--bg); display: flex; flex-direction: column; box-shadow: 0 0 0 1px var(--border); }
