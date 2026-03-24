@@ -640,12 +640,11 @@ function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'flex';
   loadMedsSupps();
-  // Set today's date in update header
   const dateEl = document.getElementById('update-date');
   if (dateEl) {
     dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
   }
-
+  loadLastBrief();
 }
 
 function nav(id, btn) {
@@ -665,6 +664,81 @@ function sel(domain, val, btn) {
   if (domain === 'flag') document.getElementById('flag-wrap').style.display = val === 'yes' ? 'block' : 'none';
 }
 
+
+async function loadLastBrief() {
+  if (!db) return;
+  try {
+    const { data, error } = await db
+      .from('entries')
+      .select('created_at, brief, research')
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (error || !data || !data.length) return;
+    const entry = data[0];
+    const entryDate = new Date(entry.created_at).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+
+    if (entry.brief) {
+      const brief = typeof entry.brief === 'string' ? JSON.parse(entry.brief) : entry.brief;
+      // Show brief tab content with the saved date
+      document.getElementById('brief-empty').style.display = 'none';
+      document.getElementById('brief-loading').style.display = 'none';
+      document.getElementById('brief-content').style.display = 'block';
+      document.getElementById('brief-date').textContent = entryDate;
+      const flags = document.getElementById('brief-flags');
+      flags.innerHTML = (brief.red_flag_priority && brief.red_flag_note)
+        ? `<div class="flag-bar"><div class="flag-dot"></div><div class="flag-txt"><strong>Flag: </strong>${brief.red_flag_note}</div></div>` : '';
+      document.getElementById('brief-highlights').innerHTML = (brief.highlights||[]).map(s=>`<p>${s}</p>`).join('');
+      document.getElementById('brief-therapy').innerHTML   = (brief.therapy_focus||[]).map(s=>`<p>${s}</p>`).join('');
+      document.getElementById('brief-qs').innerHTML        = (brief.questions||[]).map((q,i)=>`<li class="q-item"><span class="q-num">${i+1}</span>${q}</li>`).join('');
+      document.getElementById('brief-watch').innerHTML     = (brief.watch_for||[]).map(s=>`<p>${s}</p>`).join('');
+      document.getElementById('brief-actions').innerHTML   = (brief.actions||[]).map((a,i)=>`
+        <div class="act-item">
+          <div class="chk" id="c${i}" onclick="toggleAct(${i})"></div>
+          <div class="act-txt" id="ct${i}">${a}</div>
+        </div>`).join('');
+      // Add "last updated" note
+      const briefContent = document.getElementById('brief-content');
+      let staleNote = document.getElementById('brief-stale-note');
+      if (!staleNote) {
+        staleNote = document.createElement('div');
+        staleNote.id = 'brief-stale-note';
+        staleNote.style.cssText = 'font-size:11px;color:var(--text3);text-align:center;padding:8px 0 4px;';
+        briefContent.insertBefore(staleNote, briefContent.firstChild);
+      }
+      staleNote.textContent = `Showing brief from ${entryDate} — submit today's update to refresh`;
+    }
+
+    if (entry.research) {
+      const res = typeof entry.research === 'string' ? JSON.parse(entry.research) : entry.research;
+      document.getElementById('res-empty').style.display = 'none';
+      document.getElementById('res-loading').style.display = 'none';
+      document.getElementById('res-content').style.display = 'block';
+      function tier(id, items) {
+        const el = document.getElementById(id);
+        if (!items || !items.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0">None flagged</div>'; return; }
+        el.innerHTML = items.map(x=>`<div class="tier-item">
+          <div class="tier-name">${x.name}</div>
+          <div class="tier-desc">${x.desc||x.reason||''}</div>
+          ${x.evidence?`<span class="badge b-teal" style="margin-top:5px">${x.evidence}</span>`:''}
+        </div>`).join('');
+      }
+      tier('t1',res.tier1); tier('t2',res.tier2); tier('t3',res.tier3);
+      document.getElementById('t-avoid').innerHTML = (res.avoid||[]).map(x=>`<div class="tier-item"><div class="tier-name">${x.name}</div><div class="tier-desc">${x.reason||''}</div></div>`).join('');
+      // Add stale note to research tab
+      const resContent = document.getElementById('res-content');
+      let resNote = document.getElementById('res-stale-note');
+      if (!resNote) {
+        resNote = document.createElement('div');
+        resNote.id = 'res-stale-note';
+        resNote.style.cssText = 'font-size:11px;color:var(--text3);text-align:center;padding:4px 0 8px;';
+        resContent.insertBefore(resNote, resContent.firstChild);
+      }
+      resNote.textContent = `Showing research from ${entryDate} — submit today's update to refresh`;
+    }
+  } catch(e) {
+    console.warn('loadLastBrief error:', e);
+  }
+}
 
 // ── COLLAPSIBLE ──
 function toggleCollapsible(id) {
