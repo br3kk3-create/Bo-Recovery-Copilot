@@ -607,6 +607,7 @@ let sleepVal = 6;
 let R = {};
 let aiHistory = [];
 let docText = '';
+let lastDoc = null;
 
 window.addEventListener('DOMContentLoaded', () => {
   if (CONFIG.supabaseUrl) {
@@ -670,7 +671,7 @@ async function loadLastBrief() {
   try {
     const { data, error } = await db
       .from('entries')
-      .select('created_at, brief, research')
+      .select('created_at, brief, research, doc')
       .order('created_at', { ascending: false })
       .limit(1);
     if (error || !data || !data.length) return;
@@ -734,6 +735,28 @@ async function loadLastBrief() {
         resContent.insertBefore(resNote, resContent.firstChild);
       }
       resNote.textContent = `Showing research from ${entryDate} — submit today's update to refresh`;
+    }
+
+    if (entry.doc) {
+      const doc = typeof entry.doc === 'string' ? JSON.parse(entry.doc) : entry.doc;
+      document.getElementById('doc-empty').style.display = 'none';
+      document.getElementById('doc-loading').style.display = 'none';
+      document.getElementById('doc-content').style.display = 'block';
+      document.getElementById('doc-date').textContent = entryDate;
+      document.getElementById('doc-status').innerHTML  = (doc.status||[]).map(s=>`<p>${s}</p>`).join('');
+      document.getElementById('doc-qs').innerHTML      = (doc.questions||[]).map((q,i)=>`<li class="q-item"><span class="q-num">${i+1}</span>${q}</li>`).join('');
+      document.getElementById('doc-therapy').innerHTML = (doc.therapy_items||[]).map((t,i)=>`<li class="q-item"><span class="q-num">${i+1}</span>${t}</li>`).join('');
+      docText = doc.plain_text || '';
+      // Add stale note
+      const docContent = document.getElementById('doc-content');
+      let docNote = document.getElementById('doc-stale-note');
+      if (!docNote) {
+        docNote = document.createElement('div');
+        docNote.id = 'doc-stale-note';
+        docNote.style.cssText = 'font-size:11px;color:var(--text3);text-align:center;padding:4px 0 8px;';
+        docContent.insertBefore(docNote, docContent.firstChild);
+      }
+      docNote.textContent = `Showing summary from ${entryDate} — submit today's update to refresh`;
     }
   } catch(e) {
     console.warn('loadLastBrief error:', e);
@@ -878,6 +901,7 @@ Update: ${update}`;
     renderBrief(brief);
     renderResearch(res);
     renderDoc(doc);
+    lastDoc = doc;
 
     const nutr = getNutrition();
     if (db) {
@@ -893,7 +917,7 @@ Update: ${update}`;
         calories: nutr.calories,
         protein: nutr.protein,
         water: nutr.water,
-        brief, research: res
+        brief, research: res, doc
       });
       if (saveError) {
         console.error('Supabase save error:', JSON.stringify(saveError));
