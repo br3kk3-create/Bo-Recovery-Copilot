@@ -669,17 +669,33 @@ function sel(domain, val, btn) {
 async function loadLastBrief() {
   if (!db) return;
   try {
-    const { data, error } = await db
+    // First try to find most recent entry with doc data
+    const { data: docData, error: docErr } = await db
+      .from('entries')
+      .select('created_at, brief, research, doc')
+      .not('doc', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    // Also get most recent entry for brief/research (may differ)
+    const { data: recentData, error: recentErr } = await db
       .from('entries')
       .select('created_at, brief, research, doc')
       .order('created_at', { ascending: false })
       .limit(1);
-    if (error || !data || !data.length) return;
-    const entry = data[0];
+
+    if (recentErr || !recentData || !recentData.length) return;
+
+    // Use the entry with doc if available, otherwise fall back to most recent
+    const entry = (!docErr && docData && docData.length) ? docData[0] : recentData[0];
+    const briefEntry = recentData[0];
+
+    console.log('loadLastBrief — most recent entry date:', entry.created_at);
+    console.log('has brief:', !!briefEntry.brief, 'has research:', !!briefEntry.research, 'has doc:', !!entry.doc);
     const entryDate = new Date(entry.created_at).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
 
-    if (entry.brief) {
-      const brief = typeof entry.brief === 'string' ? JSON.parse(entry.brief) : entry.brief;
+    if (briefEntry.brief) {
+      const brief = typeof briefEntry.brief === 'string' ? JSON.parse(entry.brief) : entry.brief;
       // Show brief tab content with the saved date
       document.getElementById('brief-empty').style.display = 'none';
       document.getElementById('brief-loading').style.display = 'none';
@@ -709,8 +725,8 @@ async function loadLastBrief() {
       staleNote.textContent = `Showing brief from ${entryDate} — submit today's update to refresh`;
     }
 
-    if (entry.research) {
-      const res = typeof entry.research === 'string' ? JSON.parse(entry.research) : entry.research;
+    if (briefEntry.research) {
+      const res = typeof briefEntry.research === 'string' ? JSON.parse(entry.research) : entry.research;
       document.getElementById('res-empty').style.display = 'none';
       document.getElementById('res-loading').style.display = 'none';
       document.getElementById('res-content').style.display = 'block';
