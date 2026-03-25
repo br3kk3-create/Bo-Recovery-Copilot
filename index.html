@@ -593,16 +593,12 @@ const CONFIG = {
 
 const BO = `PATIENT BACKGROUND (pre-loaded):
 - Adult male, severe TBI from fall + multiple ischemic strokes from brain bleed (~11 hours)
-- Bo is 6' 3" tall, 180 lbs, junior college baseball pitcher and tri-sport high school athlete, and much of his muscle ton remains intact as he progresses through therapy
 - Injury date: May 10, 2025
 - 3-month inpatient rehab at Craig Hospital, discharged ~August 2025
 - Intrathecal baclofen pump — spasticity and neurostorming largely controlled
 - ~10 months post-injury
 - Emerging / mostly functionally conscious
-- Right eye appears sometimes out of alignment with left eye - left eye better at locking on to people and things
 - KEY MILESTONE: recently started yes/no communication via eye blinks
-- Volitional limb control is progressing, but difficult for him and slow
-- NOTE: Bo experiences recurrent jaw locking (neurogenic TMJ dislocation) during chewing. This is a coordination/neuromuscular issue unrelated to spasticity or the baclofen pump. Do not conflate jaw locking with spasticity symptoms in research or recommendations.
 - Critical emergence window — not acute ICU, not chronic stable
 - Tool users: family and care team together`;
 
@@ -1051,17 +1047,68 @@ function domScore(val) {
   return { worse:1, same:3, better:4, new:5 }[val] || null;
 }
 
+function dedupeByDay(entries) {
+  // Merge all same-day entries into one composite record.
+  // For each field, take the most recent non-null/non-empty value.
+  // entries are sorted newest-first, so we iterate in reverse to let
+  // newer values overwrite older ones.
+
+  const dayMap = {};
+
+  // Process oldest-first so newer values win
+  const oldest_first = [...entries].reverse();
+
+  for (const e of oldest_first) {
+    const day = e.entry_date || new Date(e.created_at).toISOString().split('T')[0];
+    if (!dayMap[day]) {
+      // Start with a copy of this entry as the base
+      dayMap[day] = { ...e, entry_date: day };
+    } else {
+      const merged = dayMap[day];
+      // For each field, newer non-empty value wins
+      const fields = [
+        'blinks','alert','motor','mood','flag_note',
+        'rarm','larm','rleg','lleg',
+        'therapy','note','meds','supplements','brief','research','doc'
+      ];
+      for (const f of fields) {
+        if (e[f] !== null && e[f] !== undefined && e[f] !== '') {
+          merged[f] = e[f];
+        }
+      }
+      // For numeric fields, newer non-zero value wins
+      const numFields = ['sleep','calories','protein','water'];
+      for (const f of numFields) {
+        if (e[f] !== null && e[f] !== undefined && e[f] !== 0) {
+          merged[f] = e[f];
+        }
+      }
+      // Always use the most recent created_at for display
+      merged.created_at = e.created_at;
+    }
+  }
+
+  // Return sorted newest-first
+  return Object.values(dayMap).sort((a, b) =>
+    new Date(b.entry_date) - new Date(a.entry_date)
+  );
+}
+
 function renderDashboard(entries) {
   document.getElementById('dash-content').style.display = 'block';
-  const latest = entries[0];
-  const recent = entries.slice(0, 7).reverse();
 
-  const streak = calcStreak(entries);
-  const avgSleep = entries.length ? +(entries.reduce((a,e) => a+(e.sleep||0),0)/entries.length).toFixed(1) : 0;
+  // Dedupe by day — multiple submissions on same day count as 1
+  const dailyEntries = dedupeByDay(entries);
+  const latest = dailyEntries[0];
+  const recent = dailyEntries.slice(0, 7).reverse();
+
+  const uniqueDays = dailyEntries.length;
+  const streak = calcStreak(dailyEntries);
+  const avgSleep = dailyEntries.length ? +(dailyEntries.reduce((a,e) => a+(e.sleep||0),0)/dailyEntries.length).toFixed(1) : 0;
   const blinkGood = recent.filter(e => e.blinks === 'better' || e.blinks === 'new').length;
 
   document.getElementById('dash-metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">Days logged</div><div class="metric-val">${entries.length}</div><div class="metric-sub">Total entries</div></div>
+    <div class="metric"><div class="metric-label">Days logged</div><div class="metric-val">${uniqueDays}</div><div class="metric-sub">Unique days</div></div>
     <div class="metric"><div class="metric-label">Current streak</div><div class="metric-val">${streak} <span style="font-size:13px;font-weight:400">days</span></div><div class="metric-sub">Consecutive</div></div>
     <div class="metric"><div class="metric-label">Avg sleep</div><div class="metric-val">${avgSleep} <span style="font-size:13px;font-weight:400">hrs</span></div><div class="metric-sub">All entries</div></div>
     <div class="metric"><div class="metric-label">Blink progress</div><div class="metric-val">${blinkGood}<span style="font-size:13px;font-weight:400">/7</span></div><div class="metric-sub">Better or new last 7</div></div>`;
@@ -1080,14 +1127,24 @@ function renderDashboard(entries) {
 
   drawTrend(recent);
 
-  document.getElementById('hist-list').innerHTML = entries.slice(0,10).map(e => {
+  // History list — show all raw entries so corrections are visible, but label same-day ones
+  const dayCount = {};
+  entries.forEach(e => {
+    const day = e.entry_date || new Date(e.created_at).toISOString().split('T')[0];
+    dayCount[day] = (dayCount[day] || 0) + 1;
+  });
+
+  document.getElementById('hist-list').innerHTML = entries.slice(0,14).map((e,idx) => {
     const d = new Date(e.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const day = e.entry_date || new Date(e.created_at).toISOString().split('T')[0];
+    const isUpdate = dayCount[day] > 1 && idx > 0 &&
+      (entries[idx-1].entry_date || new Date(entries[idx-1].created_at).toISOString().split('T')[0]) === day;
     const bc = e.blinks === 'better' || e.blinks === 'new' ? 'b-teal' : e.blinks === 'worse' ? 'b-red' : 'b-gray';
     const ac = e.alert === 'better' ? 'b-teal' : e.alert === 'worse' ? 'b-red' : 'b-gray';
     const nutrStr = (e.calories||e.protein||e.water) ? `${e.calories||0} cal · ${e.protein||0}g protein · ${e.water||0}oz water` : '';
-    return `<div class="hist-item">
+    return `<div class="hist-item" style="${isUpdate ? 'opacity:0.65;border-left:2px solid var(--amber);padding-left:8px;' : ''}">
       <div>
-        <div class="hist-date">${d}</div>
+        <div class="hist-date">${d}${isUpdate ? ' <span style="font-size:10px;color:var(--amber)">earlier update</span>' : ''}</div>
         <div class="hist-note">${e.note || 'No note'}</div>
         ${nutrStr ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${nutrStr}</div>` : ''}
       </div>
@@ -1098,8 +1155,8 @@ function renderDashboard(entries) {
     </div>`;
   }).join('');
 
-  // Med / supplement timeline — show entries where meds or supps exist, highlight changes
-  const medEntries = entries.filter(e => e.meds || e.supplements).slice(0, 15);
+  // Med timeline — dedupe by day for cleanliness
+  const medEntries = dailyEntries.filter(e => e.meds || e.supplements).slice(0, 15);
   if (medEntries.length) {
     document.getElementById('med-timeline-card').style.display = 'block';
     let lastMeds = null, lastSupps = null;
@@ -1117,12 +1174,15 @@ function renderDashboard(entries) {
   }
 }
 
-function calcStreak(entries) {
-  if (!entries.length) return 0;
+function calcStreak(dailyEntries) {
+  // dailyEntries is already deduped — one per day, newest first
+  if (!dailyEntries.length) return 0;
   let s = 1;
-  for (let i = 0; i < entries.length - 1; i++) {
-    const diff = Math.round((new Date(entries[i].created_at) - new Date(entries[i+1].created_at)) / 86400000);
-    if (diff <= 1) s++; else break;
+  for (let i = 0; i < dailyEntries.length - 1; i++) {
+    const d1 = dailyEntries[i].entry_date || new Date(dailyEntries[i].created_at).toISOString().split('T')[0];
+    const d2 = dailyEntries[i+1].entry_date || new Date(dailyEntries[i+1].created_at).toISOString().split('T')[0];
+    const diff = Math.round((new Date(d1) - new Date(d2)) / 86400000);
+    if (diff === 1) s++; else break;
   }
   return s;
 }
